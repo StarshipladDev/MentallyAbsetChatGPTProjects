@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>World War Trenches</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        #gameBoard {
+            margin: 20px auto;
+            border: 3px solid #333;
+            width: 500px;
+            height: 500px;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+        }
+
+        .grid-square {
+            border: 1px solid #999;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            /* Needed for positioning units */
+        }
+
+        .grid-square:hover {
+            background-color: #f0f0f0;
+            /* Hover effect for interactive feel */
+        }
+
+        .unit {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .trench {
+            background-color: #78866B;
+            /* A dirt-like color */
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==');
+            background-size: cover;
+            position: relative;
+        }
+
+        .trench::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('path_to_trench_image.jpg');
+            /* Path to an image representing a trench */
+            background-size: cover;
+            opacity: 0.7;
+            /* Adjust as needed */
+        }
+
+        /* Styles for units */
+        .unit.player1 {
+            background-color: red;
+        }
+
+        .unit.player2 {
+            background-color: green;
+        }
+
+        .unit.player3 {
+            background-color: blue;
+        }
+
+        .infantry {
+            border: 2px solid white;
+        }
+
+        .artillery {
+            border: 2px solid yellow;
+        }
+
+        .engineer {
+            border: 2px solid black;
+        }
+
+        .highlighted {
+            box-shadow: 0px 0px 10px 3px gold;
+            /* Glowing effect */
+        }
+
+        @keyframes attackAnimation {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .attacking {
+            animation: attackAnimation 0.5s ease-in-out;
+        }
+    </style>
+
+</head>
+
+<body>
+    <h1>World War Trenches</h1>
+    <div id="gameControls">
+        <button id="endTurnButton">End Turn</button>
+        <button id="espionageButton">Espionage Action</button>
+        <p id="gameInfo">Current Player: <span id="currentPlayer">1</span></p>
+        <div id="attackMessage" style="display: none; /* Other styling as needed */"></div>
+        <!-- You can add more controls or information displays as needed -->
+    </div>
+
+    <div id="gameBoard">
+        <!-- Grid squares will be generated via JavaScript -->
+    </div>
+
+    <script>
+        let currentPlayer = 1;
+        const totalPlayers = 4; // Adjust based on the number of players in your game
+        selectedUnit = null;
+
+        function updateGameInfo() {
+            document.getElementById('currentPlayer').innerText = currentPlayer;
+
+            // Highlight units belonging to the current player
+            highlightCurrentPlayerUnits();
+        }
+
+        function highlightCurrentPlayerUnits() {
+            // First, remove highlights from all units
+            document.querySelectorAll('.unit').forEach(unit => {
+                unit.classList.remove('highlighted');
+            });
+
+            // Then, highlight units belonging to the current player
+            document.querySelectorAll('.unit.player' + currentPlayer).forEach(unit => {
+                unit.classList.add('highlighted');
+            });
+        }
+        function espionageAction() {
+            // Placeholder for espionage logic
+            alert("Espionage action taken by player " + currentPlayer);
+
+            // Example: Revealing the next move of the opponent
+            // This could be more complex depending on your game mechanics
+            let nextMove = predictOpponentMove(); // This function should be implemented based on your game logic
+            alert("Predicted next move of opponent: " + nextMove);
+        }
+
+        function predictOpponentMove() {
+            // Placeholder for predicting opponent's move
+            // Implement your logic here. For now, it returns a dummy move.
+            return "Move unit to square X";
+        }
+
+        function endTurn() {
+            // Logic to end the current player's turn and switch to the next player
+            actionsRemaining = 3;
+            currentPlayer = (currentPlayer % totalPlayers) + 1;
+            updateGameInfo();
+            // Add any additional end-of-turn logic here (like resetting move limits)
+        }
+        function canMove(selectedUnit, targetX, targetY) {
+            const unitX = parseInt(selectedUnit.dataset.x);
+            const unitY = parseInt(selectedUnit.dataset.y);
+
+            // Define movement range for each unit type
+            let moveRange;
+            switch (selectedUnit.dataset.type) {
+                case 'infantry': moveRange = 2; break;
+                case 'artillery': moveRange = 1; break;
+                case 'engineer': moveRange = 3; break;
+                default: moveRange = 0;
+            }
+
+            // Calculate the absolute differences in x and y
+            const xDiff = Math.abs(unitX - targetX);
+            const yDiff = Math.abs(unitY - targetY);
+
+            // Check if the target square is within the move range
+            return xDiff <= moveRange && yDiff <= moveRange;
+        }
+
+
+        function createUnit(x, y, type, player) {
+            const unit = document.createElement('div');
+            unit.classList.add('unit', type, 'player' + player);
+            unit.dataset.x = x;
+            unit.dataset.y = y;
+            unit.dataset.type = type;
+            unit.dataset.player = player;
+
+            // Calculate the index based on x and y
+            const positionIndex = y * 10 + x; // Assuming a 10x10 grid
+            document.getElementById('square' + positionIndex).appendChild(unit);
+        }
+        function squareClicked(event) {
+            if (actionsRemaining <= 0) {
+                alert("No more actions remaining this turn.");
+                return; // Exit the function if no actions are left
+            }
+            const square = event.target.closest('.grid-square');
+            const unit = square.querySelector('.unit');
+            console.log('selected unit is', selectedUnit, ', unit is', unit, ', square is', square);
+
+            const squareIndex = square.id.replace('square', '');
+            const squareX = squareIndex % 10; // X coordinate
+            const squareY = Math.floor(squareIndex / 10); // Y coordinate
+
+
+            if (unit && !selectedUnit && unit.dataset.player == currentPlayer) {
+                selectedUnit = unit;
+                unit.style.border = '3px solid gold'; // Highlight selected unit
+            }
+            else if (selectedUnit) {
+                if (square !== selectedUnit.parentElement) {
+                    const targetUnit = square.querySelector('.unit');
+                    if (targetUnit && targetUnit.dataset.player !== currentPlayer) {
+                        if (actionsRemaining > 0) {
+                            engageCombat(selectedUnit, targetUnit);
+                            actionsRemaining--;
+                        }
+                    } else if (!targetUnit) {
+                        console.log('can move is ', canMove(selectedUnit, square));
+                        if (canMove(selectedUnit, squareX, squareY)) {
+                            // Move the unit and update its data-x and data-y attributes
+                            square.appendChild(selectedUnit);
+                            selectedUnit.dataset.x = squareX;
+                            selectedUnit.dataset.y = squareY;
+                            // ... more logic for handling movement ...
+                        }
+                        // ... other conditions ...
+
+                    }
+                    selectedUnit.style.border = 'none'; // Remove highlight
+                    selectedUnit = null;
+                }
+            }
+
+
+        }
+
+        function placeUnits() {
+            // Example placement of units for each player
+            // The grid is assumed to be 10x10, and coordinates are zero-based (0-9 for both X and Y)
+
+            // Player 1 Units
+            createUnit(0, 0, 'infantry', 1); // Unit at X: 0, Y: 0
+            createUnit(1, 0, 'artillery', 1); // Unit at X: 1, Y: 0
+
+            // Player 2 Units
+            createUnit(0, 1, 'engineer', 2); // Unit at X: 0, Y: 1
+            createUnit(1, 1, 'infantry', 2); // Unit at X: 1, Y: 1
+
+            // Player 3 Units
+            createUnit(0, 2, 'artillery', 3); // Unit at X: 0, Y: 2
+            createUnit(1, 2, 'engineer', 3); // Unit at X: 1, Y: 2
+
+            // Add more units as needed
+        }
+
+        function createTrench(position) {
+            const square = document.getElementById('square' + position);
+            if (square) {
+                square.classList.add('trench');
+            }
+        }
+
+        function rollDice() {
+            return Math.floor(Math.random() * 6) + 1; // Simulates a six-sided dice roll
+        }
+        function displayAttackMessage(attacker, defender) {
+            const message = `Player ${attacker.dataset.player}'s ${attacker.dataset.type} attacks Player ${defender.dataset.player}'s ${defender.dataset.type}!`;
+            const messageElement = document.getElementById('attackMessage');
+            messageElement.innerText = message;
+            messageElement.style.display = 'block';
+
+            // Hide the message after some time
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 2000); // Adjust time as needed
+        }
+        function isTargetInRange(attacker, target) {
+            const attackerPosition = parseInt(attacker.dataset.position);
+            const targetPosition = parseInt(target.dataset.position);
+
+            // Assuming a 10x10 grid for calculation
+            const gridColumns = 10;
+            const horizontalDistance = Math.abs(attackerPosition % gridColumns - targetPosition % gridColumns);
+            const verticalDistance = Math.abs(Math.floor(attackerPosition / gridColumns) - Math.floor(targetPosition / gridColumns));
+            const totalDistance = horizontalDistance + verticalDistance;
+            // Define range for each unit type
+            switch (attacker.dataset.type) {
+                case 'infantry':
+                    return totalDistance <= 2; // Example range
+                case 'artillery':
+                    return totalDistance <= 4;
+                case 'engineer':
+                    return totalDistance <= 1;
+                default:
+                    return false;
+            }
+        }
+
+        function engageCombat(attacker, defender) {
+            if (!isTargetInRange(attacker, defender)) {
+                alert("Target is out of range!");
+                return;
+            }
+            const attackerRoll = rollDice();
+            const defenderRoll = rollDice();
+            // Basic combat resolution logic
+            if (attackerRoll > defenderRoll) {
+                // Defender loses, remove the defender unit
+                defender.remove();
+            } // You can expand this logic to include unit types and other rules
+            attacker.classList.add('attacking');
+            setTimeout(() => {
+                attacker.classList.remove('attacking');
+            }, 500); // This duration should match the animation duration
+
+            // Display attack message
+            displayAttackMessage(attacker, defender);
+        }
+        function createBoard() {
+            const board = document.getElementById('gameBoard');
+            for (let y = 0; y < 10; y++) { // For each row
+                for (let x = 0; x < 10; x++) { // For each column
+                    let square = document.createElement('div');
+                    square.classList.add('grid-square');
+                    square.id = 'square' + (y * 10 + x); // Assign an ID based on position
+                    board.appendChild(square);
+                }
+            }
+            createTrench(5);  // Create a trench at position 5 createTrench(5);
+            createTrench(25); // Add more trenches
+            createTrench(35);
+            createTrench(15); // Create a trench at position 15
+            placeUnits();
+
+        }
+        document.getElementById('endTurnButton').addEventListener('click', endTurn);
+
+        document.getElementById('espionageButton').addEventListener('click', espionageAction);
+        window.onload = function () {
+            createBoard();
+            actionsRemaining = 3; // Initialize actions for the first player
+        };
+    </script>
+
+</body>
+
+</html>
